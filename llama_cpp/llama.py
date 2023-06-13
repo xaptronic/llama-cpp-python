@@ -219,6 +219,7 @@ class Llama:
         last_n_tokens_size: int = 64,
         lora_base: Optional[str] = None,
         lora_path: Optional[str] = None,
+        grammar: Optional[str] = None,
         verbose: bool = True,
     ):
         """Load a llama.cpp model from `model_path`.
@@ -272,6 +273,12 @@ class Llama:
 
         self.lora_base = lora_base
         self.lora_path = lora_path
+        self.grammar = grammar
+
+        if grammar:
+            self.grammar = llama_cpp.llama_parse_grammar(
+                llama_cpp.c_char_p(self.grammar.encode("utf-8"))
+            )
 
         ### DEPRECATED ###
         self.n_parts = n_parts
@@ -496,8 +503,16 @@ class Llama:
         )
         if not penalize_nl:
             candidates.data[self._token_nl].logit = llama_cpp.c_float(nl_logit)
+
+        if self.grammar:
+            llama_cpp.llama_sample_grammar(
+                self.ctx,
+                candidates=llama_cpp.ctypes.byref(candidates),
+                grammar=self.grammar,
+            ) # type: ignore
+
         if temp.value == 0.0:
-            return llama_cpp.llama_sample_token_greedy(
+            id = llama_cpp.llama_sample_token_greedy(
                 ctx=self.ctx,
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
             )
@@ -509,7 +524,7 @@ class Llama:
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
                 temp=temp,
             )
-            return llama_cpp.llama_sample_token_mirostat(
+            id = llama_cpp.llama_sample_token_mirostat(
                 ctx=self.ctx,
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
                 tau=mirostat_tau,
@@ -524,7 +539,7 @@ class Llama:
                 candidates=llama_cpp.ctypes.pointer(candidates),
                 temp=temp,
             )
-            return llama_cpp.llama_sample_token_mirostat_v2(
+            id = llama_cpp.llama_sample_token_mirostat_v2(
                 ctx=self.ctx,
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
                 tau=mirostat_tau,
@@ -561,10 +576,20 @@ class Llama:
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
                 temp=temp,
             )
-            return llama_cpp.llama_sample_token(
+            id = llama_cpp.llama_sample_token(
                 ctx=self.ctx,
                 candidates=llama_cpp.ctypes.byref(candidates),  # type: ignore
             )
+
+        if self.grammar:
+            breakpoint()
+            id = llama_cpp.llama_grammar_accept_token(
+                self.ctx,
+                self.grammar,
+                id
+            )
+
+        return id
 
     def sample(
         self,

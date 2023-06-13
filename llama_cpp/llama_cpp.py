@@ -58,6 +58,7 @@ def _load_shared_library(lib_base_name: str):
         cdll_args["winmode"] = 0
 
     # Try to load the shared library, handling potential errors
+    print(_lib_paths)
     for _lib_path in _lib_paths:
         if _lib_path.exists():
             try:
@@ -112,6 +113,8 @@ llama_context_p = c_void_p
 # typedef int llama_token;
 llama_token = c_int
 llama_token_p = POINTER(llama_token)
+
+llama_grammar_p = c_void_p
 
 
 # typedef struct llama_token_data {
@@ -791,6 +794,45 @@ _lib.llama_sample_temperature.argtypes = [
     c_float,
 ]
 _lib.llama_sample_temperature.restype = None
+
+
+def llama_parse_grammar(grammar: str):
+    return _lib.llama_parse_grammar(grammar)
+
+_lib.llama_parse_grammar.argtypes = [
+    c_char_p,
+]
+_lib.llama_parse_grammar.restype = llama_grammar_p
+
+
+def llama_sample_grammar(
+    ctx: llama_context_p,
+    candidates,  # type: _Pointer[llama_token_data_array]
+    grammar: llama_grammar_p,
+):
+    return _lib.llama_sample_grammar(ctx, candidates, grammar)
+
+_lib.llama_sample_grammar.argtypes = [
+    llama_context_p,
+    llama_token_data_array_p,
+    llama_grammar_p,
+]
+_lib.llama_sample_grammar.restype = None
+
+
+def llama_grammar_accept_token(
+    ctx: llama_context_p,
+    grammar: llama_grammar_p,
+    id: llama_token,
+):
+    return _lib.llama_grammar_accept_token(ctx, grammar, id)
+
+_lib.llama_grammar_accept_token.argtypes = [
+    llama_context_p,
+    llama_grammar_p,
+    llama_token
+]
+_lib.llama_grammar_accept_token.restype = llama_token
 
 
 # @details Mirostat 1.0 algorithm described in the paper https://arxiv.org/abs/2007.14966. Uses tokens instead of words.
