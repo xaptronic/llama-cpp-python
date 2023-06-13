@@ -8,6 +8,7 @@
 
 #include "llama-util.h"
 #include "llama.h"
+#include "grammar-parser.h"
 
 #include "ggml.h"
 #ifdef GGML_USE_CUBLAS
@@ -1996,6 +1997,24 @@ struct llama_grammar * llama_grammar_init(const uint16_t * src, uint16_t start_r
 
 void llama_grammar_free(struct llama_grammar * grammar) {
     delete grammar;
+}
+
+struct llama_grammar * llama_parse_grammar(const char * grammar_str) {
+    grammar_parser::parse_state parsed_grammar;
+    llama_grammar *             grammar = NULL;
+    if (grammar_str != NULL) {
+        parsed_grammar = grammar_parser::parse(grammar_str);
+        // will be empty (default) if there are parse errors
+        if (parsed_grammar.out_grammar.empty()) {
+            return NULL;
+        }
+        fprintf(stderr, "%s: grammar:\n", __func__);
+        grammar_parser::print_grammar(stderr, parsed_grammar);
+        fprintf(stderr, "\n");
+        grammar = llama_grammar_init(
+            parsed_grammar.out_grammar.data(), parsed_grammar.symbol_ids.at("root"));
+    }
+    return grammar;
 }
 
 //
