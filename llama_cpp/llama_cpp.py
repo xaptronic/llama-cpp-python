@@ -114,6 +114,8 @@ llama_context_p = c_void_p
 llama_token = c_int
 llama_token_p = POINTER(llama_token)
 
+# struct llama_grammar
+parse_state_p = c_void_p
 llama_grammar_p = c_void_p
 
 
@@ -796,13 +798,22 @@ _lib.llama_sample_temperature.argtypes = [
 _lib.llama_sample_temperature.restype = None
 
 
-def llama_parse_grammar(grammar: str):
-    return _lib.llama_parse_grammar(grammar)
+def llama_grammar_parse(grammar: str):
+    return _lib.llama_grammar_parse(grammar)
 
-_lib.llama_parse_grammar.argtypes = [
+_lib.llama_grammar_parse.argtypes = [
     c_char_p,
 ]
-_lib.llama_parse_grammar.restype = llama_grammar_p
+_lib.llama_grammar_parse.restype = parse_state_p
+
+
+def llama_grammar_from_state(parse_state: parse_state_p):
+    return _lib.llama_grammar_from_state(parse_state)
+
+_lib.llama_grammar_from_state.argtypes = [
+    parse_state_p
+]
+_lib.llama_grammar_from_state.restype = llama_grammar_p
 
 
 def llama_sample_grammar(

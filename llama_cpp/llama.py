@@ -273,12 +273,6 @@ class Llama:
 
         self.lora_base = lora_base
         self.lora_path = lora_path
-        self.grammar = grammar
-
-        if grammar:
-            self.grammar = llama_cpp.llama_parse_grammar(
-                llama_cpp.c_char_p(self.grammar.encode("utf-8"))
-            )
 
         ### DEPRECATED ###
         self.n_parts = n_parts
@@ -305,6 +299,12 @@ class Llama:
                 raise RuntimeError(
                     f"Failed to apply LoRA from lora path: {self.lora_path} to base path: {self.lora_base}"
                 )
+
+        if grammar:
+            self.parse_state = llama_cpp.llama_grammar_parse(
+                llama_cpp.c_char_p(grammar.encode("utf-8"))
+            )
+            self.grammar = llama_cpp.llama_grammar_from_state(self.parse_state)
 
         if self.verbose:
             print(llama_cpp.llama_print_system_info().decode("utf-8"), file=sys.stderr)
@@ -582,7 +582,6 @@ class Llama:
             )
 
         if self.grammar:
-            breakpoint()
             id = llama_cpp.llama_grammar_accept_token(
                 self.ctx,
                 self.grammar,
@@ -890,7 +889,8 @@ class Llama:
             stopping_criteria=stopping_criteria,
             logits_processor=logits_processor,
         ):
-            if token == self._token_eos:
+
+            if token == self._token_eos: #or token == self._token_nl:
                 text = self.detokenize(completion_tokens)
                 finish_reason = "stop"
                 break
